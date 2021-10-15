@@ -1,6 +1,7 @@
 package csv
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -76,10 +77,23 @@ func (d *Deployment) populateRules(manifest *unstructured.Unstructured) error {
 	return nil
 }
 
+// appendRules if exist
+func appendRules(existing *[]v1alpha1.StrategyDeploymentPermissions, add v1alpha1.StrategyDeploymentPermissions) (ret *[]v1alpha1.StrategyDeploymentPermissions) {
+         ret = make([]v1alpha1.StrategyDeploymentPermissions, len(*existing))
+         for _, v := range existing {
+                ret = append(ret, v)
+                if v.ServiceAccountName == add.ServiceAccountName {
+                        v.Rules = append(v.Rules, add.Rules...)
+                        continue
+                }
+                ret = append(ret, add)
+        }
+        return ret
+}
+
 // formatPermissions
 func (d *Deployment) formatPermissions(manifest *unstructured.Unstructured, cluster bool) error {
 	perm := v1alpha1.StrategyDeploymentPermissions{}
-
 	rb := &rbacv1.RoleBinding{}
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(manifest.Object, rb); err != nil {
 		return err
@@ -90,10 +104,11 @@ func (d *Deployment) formatPermissions(manifest *unstructured.Unstructured, clus
 			perm.ServiceAccountName = sub.Name
 			perm.Rules = d.rules[rb.RoleRef.Name]
 			if cluster {
-				d.permClusterSet = append(d.permClusterSet, perm)
+				fmt.Printf("appending %+v\n into %+v", d.permClusterSet, perm)
+				d.permClusterSet = appendRules(d.permClusterSet, perm)
 			}
 			if !cluster {
-				d.permSet = append(d.permSet, perm)
+				d.permSet = appendRules(d.permSet, perm)
 			}
 		}
 	}
