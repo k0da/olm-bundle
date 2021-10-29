@@ -43,7 +43,7 @@ func (hm *HelmMetadata) Embed(ctx context.Context, csv *v1alpha1.ClusterServiceV
 	}
 	csv.Name = fmt.Sprintf("%s.%s", c.Name, ver)
 	// set mandataory displayName field
-	csv.DisplayName = c.Name
+	csv.Spec.DisplayName = c.Name
 
 	v, err := semver.Make(strings.TrimPrefix(ver, "v"))
 	if err != nil {
